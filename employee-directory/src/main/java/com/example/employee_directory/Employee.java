@@ -35,4 +35,20 @@ public class Employee {
     public String getEmail() {
         return email;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
 }

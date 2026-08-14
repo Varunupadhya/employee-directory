@@ -5,11 +5,13 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 public class EmployeeController {
@@ -66,6 +68,31 @@ public class EmployeeController {
         nextId++;
 
         return "Employee added successfully";
+    }
+
+    @PutMapping("/update/{id}")
+    @ResponseBody
+    public String updateEmployee(
+            @PathVariable int id,
+            @RequestBody EmployeeRequest request
+    ) {
+        Optional<Employee> existingEmployee = employees
+                .stream()
+                .filter(employee -> employee.getId() == id)
+                .findFirst();
+
+        if (existingEmployee.isPresent()) {
+            Employee employee = existingEmployee.get();
+
+            employee.setName(request.getName());
+            employee.setRole(request.getRole());
+            employee.setDepartment(request.getDepartment());
+            employee.setEmail(request.getEmail());
+
+            return "Employee updated successfully";
+        }
+
+        return "Employee not found";
     }
 
     @GetMapping("/delete/{id}")
