@@ -23,12 +23,19 @@ phases:
       - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
-    commands:
-      - echo Build completed on `date`
-      - echo Pushing Docker image to Amazon ECR...
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo Image pushed successfully
-      - printf '[{"name":"employee-directory-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+  commands:
+    - echo Build completed on `date`
+    - echo Pushing Docker image to Amazon ECR...
+    - docker push $REPOSITORY_URI:$IMAGE_TAG
+    - echo Image pushed successfully
+    - printf '[{"name":"employee-directory-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+
+    - echo Triggering ECS deployment...
+    - aws ecs update-service \
+        --cluster employee-directory-cluster \
+        --service employee-directory-service \
+        --force-new-deployment
+      
 
 artifacts:
   files:
