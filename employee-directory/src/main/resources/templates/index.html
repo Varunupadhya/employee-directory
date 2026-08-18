@@ -4,7 +4,6 @@
     <title>Employee Directory v2</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <style>
         * {
             margin: 0;
@@ -368,7 +367,7 @@
             <h1>Employee Directory v2</h1>
             <p>
                 A professional Spring Boot application deployed using Docker, Amazon ECR,
-                AWS CodeBuild, AWS CDK and ECS Fargate with Application Load Balancer.
+                AWS CodeBuild, AWS CDK, ECS Fargate, Application Load Balancer and DynamoDB.
             </p>
         </div>
 
@@ -382,7 +381,7 @@
     <div class="cards">
         <div class="card">
             <span>Total Employees</span>
-            <h2 th:text="${totalEmployees}">0</h2>
+            <h2 th:text="${employees != null ? employees.size() : 0}">0</h2>
         </div>
 
         <div class="card">
@@ -391,8 +390,8 @@
         </div>
 
         <div class="card">
-            <span>Deployment</span>
-            <h2>ECS Fargate</h2>
+            <span>Database</span>
+            <h2>DynamoDB</h2>
         </div>
     </div>
 
@@ -401,21 +400,23 @@
         <div class="panel">
             <h2>Add Employee</h2>
 
-            <label for="name">Employee Name</label>
-            <input type="text" id="name" placeholder="Enter employee name">
+            @{/add}
+                <label for="name">Employee Name</label>
+                <input type="text" id="name" name="name" placeholder="Enter employee name" required>
 
-            <label for="role">Role</label>
-            <input type="text" id="role" placeholder="Enter employee role">
+                <label for="role">Role</label>
+                <input type="text" id="role" name="role" placeholder="Enter employee role" required>
 
-            <label for="department">Department</label>
-            <input type="text" id="department" placeholder="Enter department">
+                <label for="department">Department</label>
+                <input type="text" id="department" name="department" placeholder="Enter department" required>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" placeholder="Enter email address">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter email address" required>
 
-            <button class="primary-btn" type="button" onclick="addEmployee()">Add Employee</button>
+                <button class="primary-btn" type="submit">Add Employee</button>
+            </form>
 
-            <p id="message"></p>
+            <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
         </div>
 
         <div class="panel">
@@ -434,7 +435,7 @@
                 <table>
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Employee ID</th>
                         <th>Employee</th>
                         <th>Role</th>
                         <th>Department</th>
@@ -444,8 +445,12 @@
                     </thead>
 
                     <tbody id="employeeTableBody">
+                    <tr th:if="${employees == null or employees.isEmpty()}">
+                        <td colspan="6">No employees found.</td>
+                    </tr>
+
                     <tr th:each="employee : ${employees}">
-                        <td th:text="${employee.id}">1</td>
+                        <td th:text="${employee.employeeId}">employee-id</td>
                         <td th:text="${employee.name}">Employee Name</td>
                         <td>
                             <span class="role-badge" th:text="${employee.role}">Role</span>
@@ -457,7 +462,7 @@
                                 <button
                                         class="edit-btn"
                                         type="button"
-                                        th:attr="data-id=${employee.id},
+                                        th:attr="data-id=${employee.employeeId},
                                                  data-name=${employee.name},
                                                  data-role=${employee.role},
                                                  data-department=${employee.department},
@@ -466,7 +471,7 @@
                                     Edit
                                 </button>
 
-                                <a class="delete-btn" th:href="'/delete/' + ${employee.id}">
+                                @{
                                     Delete
                                 </a>
                             </div>
@@ -480,7 +485,7 @@
     </div>
 
     <div class="footer">
-        Employee Directory v1.0 | Powered by Spring Boot, Docker, ECR, CodeBuild and ECS Fargate
+        Employee Directory v2.0 | Powered by Spring Boot, Docker, ECR, CodeBuild, ECS Fargate and DynamoDB
     </div>
 
 </div>
@@ -490,124 +495,46 @@
     <div class="modal-box">
         <h2>Edit Employee</h2>
 
-        <input type="hidden" id="editId">
+        <form id="editForm" method="post">
+            <input type="hidden" id="editId">
 
-        <label for="editName">Employee Name</label>
-        <input type="text" id="editName">
+            <label for="editName">Employee Name</label>
+            <input type="text" id="editName" name="name" required>
 
-        <label for="editRole">Role</label>
-        <input type="text" id="editRole">
+            <label for="editRole">Role</label>
+            <input type="text" id="editRole" name="role" required>
 
-        <label for="editDepartment">Department</label>
-        <input type="text" id="editDepartment">
+            <label for="editDepartment">Department</label>
+            <input type="text" id="editDepartment" name="department" required>
 
-        <label for="editEmail">Email</label>
-        <input type="email" id="editEmail">
+            <label for="editEmail">Email</label>
+            <input type="email" id="editEmail" name="email" required>
 
-        <div class="modal-actions">
-            <button class="save-btn" type="button" onclick="updateEmployee()">Save Changes</button>
-            <button class="cancel-btn" type="button" onclick="closeEditModal()">Cancel</button>
-        </div>
+            <div class="modal-actions">
+                <button class="save-btn" type="submit">Save Changes</button>
+                <button class="cancel-btn" type="button" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </form>
     </div>
 
 </div>
 
 <script>
-    function addEmployee() {
-        const name = document.getElementById("name").value.trim();
-        const role = document.getElementById("role").value.trim();
-        const department = document.getElementById("department").value.trim();
-        const email = document.getElementById("email").value.trim();
-        const message = document.getElementById("message");
-
-        if (name === "" || role === "" || department === "" || email === "") {
-            message.className = "error";
-            message.innerText = "Please fill all fields.";
-            return;
-        }
-
-        fetch("/add", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                name: name,
-                role: role,
-                department: department,
-                email: email
-            })
-        })
-        .then(function(response) {
-            if (!response.ok) {
-                throw new Error("Failed to add employee");
-            }
-            return response.text();
-        })
-        .then(function() {
-            message.className = "message";
-            message.innerText = "Employee added successfully.";
-            window.location.reload();
-        })
-        .catch(function(error) {
-            message.className = "error";
-            message.innerText = "Error adding employee.";
-            console.error(error);
-        });
-    }
-
     function openEditModalFromButton(button) {
-        document.getElementById("editId").value = button.getAttribute("data-id");
+        const employeeId = button.getAttribute("data-id");
+
+        document.getElementById("editId").value = employeeId;
         document.getElementById("editName").value = button.getAttribute("data-name");
         document.getElementById("editRole").value = button.getAttribute("data-role");
         document.getElementById("editDepartment").value = button.getAttribute("data-department");
         document.getElementById("editEmail").value = button.getAttribute("data-email");
 
+        document.getElementById("editForm").action = "/update/" + employeeId;
         document.getElementById("editModal").style.display = "flex";
     }
 
     function closeEditModal() {
         document.getElementById("editModal").style.display = "none";
-    }
-
-    function updateEmployee() {
-        const id = document.getElementById("editId").value;
-        const name = document.getElementById("editName").value.trim();
-        const role = document.getElementById("editRole").value.trim();
-        const department = document.getElementById("editDepartment").value.trim();
-        const email = document.getElementById("editEmail").value.trim();
-
-        if (name === "" || role === "" || department === "" || email === "") {
-            alert("Please fill all fields.");
-            return;
-        }
-
-        fetch("/update/" + id, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                name: name,
-                role: role,
-                department: department,
-                email: email
-            })
-        })
-        .then(function(response) {
-            if (!response.ok) {
-                throw new Error("Failed to update employee");
-            }
-            return response.text();
-        })
-        .then(function() {
-            closeEditModal();
-            window.location.reload();
-        })
-        .catch(function(error) {
-            alert("Error updating employee.");
-            console.error(error);
-        });
     }
 
     function searchEmployee() {
