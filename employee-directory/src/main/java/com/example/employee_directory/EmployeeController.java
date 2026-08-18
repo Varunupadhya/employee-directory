@@ -3,107 +3,67 @@ package com.example.employee_directory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @Controller
 public class EmployeeController {
 
-    private final List<Employee> employees = new ArrayList<>();
-    private int nextId = 4;
+    private final DynamoDbEmployeeService employeeService;
 
-    public EmployeeController() {
-        employees.add(new Employee(
-                1,
-                "Varun",
-                "Cloud Engineer",
-                "AWS",
-                "varun@example.com"
-        ));
-
-        employees.add(new Employee(
-                2,
-                "Rahul",
-                "Java Developer",
-                "Engineering",
-                "rahul@example.com"
-        ));
-
-        employees.add(new Employee(
-                3,
-                "Priya",
-                "DevOps Engineer",
-                "Infrastructure",
-                "priya@example.com"
-        ));
+    public EmployeeController(DynamoDbEmployeeService employeeService) {
+        this.employeeService = employeeService;
     }
 
     @GetMapping("/")
     public String home(Model model) {
-        model.addAttribute("employees", employees);
-        model.addAttribute("totalEmployees", employees.size());
+        model.addAttribute("employees", employeeService.getAllEmployees());
+        model.addAttribute("employeeRequest", new EmployeeRequest());
+        model.addAttribute("editEmployee", null);
+
         return "index";
     }
 
     @PostMapping("/add")
-    @ResponseBody
-    public String addEmployee(@RequestBody EmployeeRequest request) {
+    public String addEmployee(@ModelAttribute EmployeeRequest employeeRequest) {
+        employeeService.addEmployee(employeeRequest);
 
-        Employee employee = new Employee(
-                nextId,
-                request.getName(),
-                request.getRole(),
-                request.getDepartment(),
-                request.getEmail()
-        );
-
-        employees.add(employee);
-        nextId++;
-
-        return "Employee added successfully";
+        return "redirect:/";
     }
 
-    @PutMapping("/update/{id}")
-    @ResponseBody
+    @GetMapping("/edit/{employeeId}")
+    public String editEmployee(@PathVariable String employeeId, Model model) {
+        Employee employee = employeeService.getEmployeeById(employeeId);
+
+        model.addAttribute("employees", employeeService.getAllEmployees());
+        model.addAttribute("employeeRequest", new EmployeeRequest());
+        model.addAttribute("editEmployee", employee);
+
+        return "index";
+    }
+
+    @PostMapping("/update/{employeeId}")
     public String updateEmployee(
-            @PathVariable int id,
-            @RequestBody EmployeeRequest request
+            @PathVariable String employeeId,
+            @ModelAttribute EmployeeRequest employeeRequest
     ) {
-        Optional<Employee> existingEmployee = employees
-                .stream()
-                .filter(employee -> employee.getId() == id)
-                .findFirst();
+        employeeService.updateEmployee(employeeId, employeeRequest);
 
-        if (existingEmployee.isPresent()) {
-            Employee employee = existingEmployee.get();
-
-            employee.setName(request.getName());
-            employee.setRole(request.getRole());
-            employee.setDepartment(request.getDepartment());
-            employee.setEmail(request.getEmail());
-
-            return "Employee updated successfully";
-        }
-
-        return "Employee not found";
+        return "redirect:/";
     }
 
-    @GetMapping("/delete/{id}")
-    public String deleteEmployee(@PathVariable int id) {
-        employees.removeIf(employee -> employee.getId() == id);
+    @GetMapping("/delete/{employeeId}")
+    public String deleteEmployee(@PathVariable String employeeId) {
+        employeeService.deleteEmployee(employeeId);
+
         return "redirect:/";
     }
 
     @GetMapping("/health")
     @ResponseBody
     public String health() {
-        return "UP - Employee Directory Application is running successfully";
+        return "OK";
     }
 }
