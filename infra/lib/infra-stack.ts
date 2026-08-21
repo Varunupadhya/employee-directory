@@ -77,8 +77,8 @@ export class InfraStack extends Stack {
         serviceName: `${appName}-service`,
         cluster: cluster,
 
-        cpu: 512,
-        memoryLimitMiB: 1024,
+        cpu: 256,
+        memoryLimitMiB: 512,
         desiredCount: 1,
 
         publicLoadBalancer: true,
@@ -97,6 +97,7 @@ export class InfraStack extends Stack {
           environment: {
             DYNAMODB_TABLE_NAME: employeeTable.tableName,
             AWS_REGION_NAME: Stack.of(this).region,
+            JAVA_OPTS: "-Xms128m -Xmx256m",
           },
 
           logDriver: ecs.LogDrivers.awsLogs({
